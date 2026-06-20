@@ -35,4 +35,4 @@ mkdir -p "$ROOT_DIR/scripts"
 cp -R "$SOURCE_DIR/scripts/." "$ROOT_DIR/scripts/"
 
 npm run generate:data
-npm run build
+npx next build
