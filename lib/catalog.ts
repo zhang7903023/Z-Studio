@@ -12,16 +12,18 @@ export function getGeneratedCatalog() {
   throw new Error("Use getCatalogBundle() instead of getGeneratedCatalog().");
 }
 
-async function loadRuntimeDb() {
+type RuntimeCatalogBundle = CatalogBundle & {
+  customers: unknown[];
+  orders: unknown[];
+  payments: unknown[];
+};
+
+async function loadRuntimeDb(): Promise<RuntimeCatalogBundle> {
   try {
     const raw = await fs.readFile(runtimeDbPath, "utf8");
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed.categories) && Array.isArray(parsed.products)) {
-      return parsed as CatalogBundle & {
-        customers: unknown[];
-        orders: unknown[];
-        payments: unknown[];
-      };
+      return parsed as RuntimeCatalogBundle;
     }
   } catch {
     const generated = await buildSourceCatalog();
@@ -31,7 +33,7 @@ async function loadRuntimeDb() {
       customers: [],
       orders: [],
       payments: []
-    };
+    } satisfies RuntimeCatalogBundle;
   }
 
   const generated = await buildSourceCatalog();
@@ -41,7 +43,7 @@ async function loadRuntimeDb() {
     customers: [],
     orders: [],
     payments: []
-  };
+  } satisfies RuntimeCatalogBundle;
 }
 
 async function saveRuntimeDb(payload: {
@@ -173,8 +175,7 @@ export function filterProducts(
     items = items.filter((product) => matchesQuery(product, filters.q ?? ""));
   }
 
-  const sort = filters.sort ?? "featured";  
-  
+  const sort = filters.sort ?? "featured";
   if (sort === "price-asc") {
     items.sort((a, b) => (productDisplayPrice(a) ?? Number.MAX_SAFE_INTEGER) - (productDisplayPrice(b) ?? Number.MAX_SAFE_INTEGER));
   } else if (sort === "price-desc") {
