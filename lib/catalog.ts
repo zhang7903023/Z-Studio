@@ -78,6 +78,7 @@ export async function getCatalogBundle() {
     }
   }
 
+  // Keep the fallback path explicit so TypeScript knows the runtime bundle is present.
   const runtime = (await loadRuntimeDb())!;
   return {
     categories: runtime.categories,
