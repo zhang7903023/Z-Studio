@@ -78,7 +78,7 @@ export async function getCatalogBundle() {
     }
   }
 
-  const runtime = await loadRuntimeDb();
+  const runtime = (await loadRuntimeDb())!;
   return {
     categories: runtime.categories,
     products: runtime.products
@@ -190,7 +190,7 @@ export function filterProducts(
 }
 
 export async function persistCatalogBundle(bundle: CatalogBundle) {
-  const runtime = await loadRuntimeDb();
+  const runtime = (await loadRuntimeDb())!;
   await saveRuntimeDb({
     ...runtime,
     categories: bundle.categories,
