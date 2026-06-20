@@ -11,7 +11,6 @@ unzip -q "$ROOT_DIR/zstudio-marketplace-source.zip" -d "$WORK_DIR"
 cd "$WORK_DIR"
 
 npm install
-npm run generate:data
 npm run build
 
 cp -R "$WORK_DIR/.next" "$ROOT_DIR/.next"
