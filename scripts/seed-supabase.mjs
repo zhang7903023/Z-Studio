@@ -1,10 +1,8 @@
-import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { buildSourceCatalog } from "../lib/catalog-source.js";
 
-const catalog = JSON.parse(
-  await readFile(new URL("../data/catalog.generated.json", import.meta.url), "utf8")
-);
+const catalog = await buildSourceCatalog();
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

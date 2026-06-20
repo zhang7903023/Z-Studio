@@ -2,7 +2,7 @@ import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase";
 import type { Customer, Order, OrderStatus, Payment, Product, Category } from "@/lib/types";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { getGeneratedCatalog } from "@/lib/catalog";
+import { buildSourceCatalog } from "@/lib/catalog-source.js";
 import { slugify } from "@/lib/slug";
 
 const dataDir = path.join(process.cwd(), "data");
@@ -21,7 +21,7 @@ async function ensureRuntimeDb() {
     const raw = await fs.readFile(runtimeDbPath, "utf8");
     return JSON.parse(raw) as RuntimeDb;
   } catch {
-    const catalog = getGeneratedCatalog();
+    const catalog = await buildSourceCatalog();
     const initial: RuntimeDb = {
       categories: catalog.categories,
       products: catalog.products,

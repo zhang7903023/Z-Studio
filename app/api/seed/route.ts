@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import fs from "node:fs/promises";
 import path from "node:path";
-import catalogBundle from "@/data/catalog.generated.json";
 import { hasSupabaseConfig, getSupabaseAdmin } from "@/lib/supabase";
+import { buildSourceCatalog } from "@/lib/catalog-source.js";
 
 export const runtime = "nodejs";
 
 export async function POST() {
   const runtimeDbPath = path.join(process.cwd(), "data", "runtime-db.json");
+  const catalogBundle = await buildSourceCatalog();
   await fs.writeFile(
     runtimeDbPath,
     JSON.stringify(

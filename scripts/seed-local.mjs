@@ -1,11 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { buildSourceCatalog } from "../lib/catalog-source.js";
 
 const root = process.cwd();
-const source = path.join(root, "data", "catalog.generated.json");
 const target = path.join(root, "data", "runtime-db.json");
 
-const payload = JSON.parse(await fs.readFile(source, "utf8"));
+const payload = await buildSourceCatalog();
 await fs.writeFile(
   target,
   JSON.stringify(
