@@ -53,16 +53,15 @@
 
 ## Vercel 部署
 1. 将这个 GitHub 仓库直接导入 Vercel。
-2. 仓库根目录已经带了一个轻量启动层，会自动解压 `zstudio-marketplace-source.zip`，再把完整源码展开到构建环境里。
-3. 设置环境变量：
+2. 设置环境变量：
    - `NEXT_PUBLIC_SITE_URL`
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `SUPABASE_STORAGE_BUCKET`
    - `ADMIN_ACCESS_KEY`
-4. Build Command 保持默认即可。
-5. 部署完成后，直接使用 Vercel 给你的正式链接或 Preview 链接分享给别人。
+3. Build Command 保持默认：`npm run build`
+4. 部署完成后，直接使用 Vercel 给你的正式链接或 Preview 链接分享给别人。
 
 ## 分享给别人看
 - 最稳妥的方式：部署到 Vercel 后，把生成的 `https://xxx.vercel.app` 链接直接发给对方。
@@ -74,5 +73,3 @@
 - 当前版本默认采用人工审核收款和人工交付流程。
 - 后台管理页已经预留了商品、分类、订单、客户管理的 API。
 - 如果暂时没有 Supabase 配置，系统会先用本地 `data/runtime-db.json` 跑起来，方便你先看效果。
-
-<!-- trigger redeploy -->

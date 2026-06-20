@@ -1,15 +1,16 @@
+import catalogBundle from "@/data/catalog.generated.json";
 import type { CatalogBundle, Category, Product } from "@/lib/types";
 import { hasSupabaseConfig, getSupabaseAdmin } from "@/lib/supabase";
 import { slugify } from "@/lib/slug";
-import { buildSourceCatalog } from "@/lib/catalog-source.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+const generated = catalogBundle as CatalogBundle;
 const dataDir = path.join(process.cwd(), "data");
 const runtimeDbPath = path.join(dataDir, "runtime-db.json");
 
 export function getGeneratedCatalog() {
-  throw new Error("Use getCatalogBundle() instead of getGeneratedCatalog().");
+  return generated;
 }
 
 type RuntimeCatalogBundle = CatalogBundle & {
@@ -26,17 +27,9 @@ async function loadRuntimeDb(): Promise<RuntimeCatalogBundle> {
       return parsed as RuntimeCatalogBundle;
     }
   } catch {
-    const generated = await buildSourceCatalog();
-    return {
-      categories: generated.categories,
-      products: generated.products,
-      customers: [],
-      orders: [],
-      payments: []
-    } satisfies RuntimeCatalogBundle;
+    // fall through to generated bundle
   }
 
-  const generated = await buildSourceCatalog();
   return {
     categories: generated.categories,
     products: generated.products,
@@ -78,8 +71,7 @@ export async function getCatalogBundle() {
     }
   }
 
-  // Keep the fallback path explicit so TypeScript knows the runtime bundle is present.
-  const runtime = (await loadRuntimeDb())!;
+  const runtime = await loadRuntimeDb();
   return {
     categories: runtime.categories,
     products: runtime.products
@@ -178,7 +170,11 @@ export function filterProducts(
 
   const sort = filters.sort ?? "featured";
   if (sort === "price-asc") {
-    items.sort((a, b) => (productDisplayPrice(a) ?? Number.MAX_SAFE_INTEGER) - (productDisplayPrice(b) ?? Number.MAX_SAFE_INTEGER));
+    items.sort(
+      (a, b) =>
+        (productDisplayPrice(a) ?? Number.MAX_SAFE_INTEGER) -
+        (productDisplayPrice(b) ?? Number.MAX_SAFE_INTEGER)
+    );
   } else if (sort === "price-desc") {
     items.sort((a, b) => (productDisplayPrice(b) ?? -1) - (productDisplayPrice(a) ?? -1));
   } else if (sort === "title") {
@@ -191,7 +187,7 @@ export function filterProducts(
 }
 
 export async function persistCatalogBundle(bundle: CatalogBundle) {
-  const runtime = (await loadRuntimeDb())!;
+  const runtime = await loadRuntimeDb();
   await saveRuntimeDb({
     ...runtime,
     categories: bundle.categories,
