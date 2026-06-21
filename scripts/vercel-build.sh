@@ -9,7 +9,7 @@ rm -rf "$WORK_DIR" "$ROOT_DIR/.next" "$ROOT_DIR/public"
 mkdir -p "$WORK_DIR"
 
 unzip -q "$ARCHIVE_PATH" -d "$WORK_DIR/unpacked"
-cp -R "$WORK_DIR/unpacked"/* "$ROOT_DIR"/
+cp -R "$WORK_DIR/unpacked"/. "$ROOT_DIR"/
 
 cd "$ROOT_DIR"
 ./node_modules/.bin/next build
