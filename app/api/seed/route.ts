@@ -1,29 +1,19 @@
 import { NextResponse } from "next/server";
-import fs from "node:fs/promises";
-import path from "node:path";
 import { hasSupabaseConfig, getSupabaseAdmin } from "@/lib/supabase";
 import { buildSourceCatalog } from "@/lib/catalog-source.js";
+import { saveRuntimeDb } from "@/lib/runtime-db";
 
 export const runtime = "nodejs";
 
 export async function POST() {
-  const runtimeDbPath = path.join(process.cwd(), "data", "runtime-db.json");
   const catalogBundle = await buildSourceCatalog();
-  await fs.writeFile(
-    runtimeDbPath,
-    JSON.stringify(
-      {
-        categories: catalogBundle.categories,
-        products: catalogBundle.products,
-        customers: [],
-        orders: [],
-        payments: []
-      },
-      null,
-      2
-    ),
-    "utf8"
-  );
+  await saveRuntimeDb({
+    categories: catalogBundle.categories,
+    products: catalogBundle.products,
+    customers: [],
+    orders: [],
+    payments: []
+  });
 
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();

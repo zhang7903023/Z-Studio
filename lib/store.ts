@@ -1,42 +1,7 @@
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase";
 import type { Customer, Order, OrderStatus, Payment, Product, Category } from "@/lib/types";
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import { buildSourceCatalog } from "@/lib/catalog-source.js";
 import { slugify } from "@/lib/slug";
-
-const dataDir = path.join(process.cwd(), "data");
-const runtimeDbPath = path.join(dataDir, "runtime-db.json");
-
-type RuntimeDb = {
-  categories: Category[];
-  products: Product[];
-  customers: Customer[];
-  orders: Order[];
-  payments: Payment[];
-};
-
-async function ensureRuntimeDb() {
-  try {
-    const raw = await fs.readFile(runtimeDbPath, "utf8");
-    return JSON.parse(raw) as RuntimeDb;
-  } catch {
-    const catalog = await buildSourceCatalog();
-    const initial: RuntimeDb = {
-      categories: catalog.categories,
-      products: catalog.products,
-      customers: [],
-      orders: [],
-      payments: []
-    };
-    await fs.writeFile(runtimeDbPath, JSON.stringify(initial, null, 2), "utf8");
-    return initial;
-  }
-}
-
-async function saveRuntimeDb(db: RuntimeDb) {
-  await fs.writeFile(runtimeDbPath, JSON.stringify(db, null, 2), "utf8");
-}
+import { loadRuntimeDb, saveRuntimeDb } from "@/lib/runtime-db";
 
 function makeId(prefix: string) {
   return `${prefix}_${crypto.randomUUID()}`;
@@ -180,7 +145,7 @@ export async function listCategories() {
       if (!result.error) return (result.data ?? []).map((item) => fromRecordCategory(item));
     }
   }
-  const db = await ensureRuntimeDb();
+  const db = await loadRuntimeDb();
   return db.categories;
 }
 
@@ -192,7 +157,7 @@ export async function listProducts() {
       if (!result.error) return (result.data ?? []).map((item) => fromRecordProduct(item));
     }
   }
-  const db = await ensureRuntimeDb();
+  const db = await loadRuntimeDb();
   return db.products;
 }
 
@@ -204,7 +169,7 @@ export async function listOrders() {
       if (!result.error) return (result.data ?? []).map((item) => fromRecordOrder(item));
     }
   }
-  const db = await ensureRuntimeDb();
+  const db = await loadRuntimeDb();
   return db.orders;
 }
 
@@ -216,7 +181,7 @@ export async function listCustomers() {
       if (!result.error) return (result.data ?? []).map((item) => fromRecordCustomer(item));
     }
   }
-  const db = await ensureRuntimeDb();
+  const db = await loadRuntimeDb();
   return db.customers;
 }
 
@@ -228,7 +193,7 @@ export async function listPayments() {
       if (!result.error) return (result.data ?? []).map((item) => fromRecordPayment(item));
     }
   }
-  const db = await ensureRuntimeDb();
+  const db = await loadRuntimeDb();
   return db.payments;
 }
 
@@ -323,7 +288,7 @@ export async function createOrder(input: {
     }
   }
 
-  const db = await ensureRuntimeDb();
+  const db = await loadRuntimeDb();
   db.customers = db.customers.filter(
     (customer) => !(customer.contactMethod === input.contactMethod && customer.contactValue === input.contactValue)
   );
@@ -368,7 +333,7 @@ export async function updateOrderStatus(orderNo: string, status: OrderStatus, ad
     }
   }
 
-  const db = await ensureRuntimeDb();
+  const db = await loadRuntimeDb();
   const order = db.orders.find((item) => item.orderNo === orderNo);
   if (!order) return false;
   order.status = status;
@@ -411,7 +376,7 @@ export async function upsertCategory(category: Partial<Category> & { name: strin
     }
   }
 
-  const db = await ensureRuntimeDb();
+  const db = await loadRuntimeDb();
   const index = db.categories.findIndex((item) => item.id === payload.id || item.slug === payload.slug);
   if (index >= 0) db.categories[index] = payload;
   else db.categories.unshift(payload);
@@ -472,7 +437,7 @@ export async function upsertProduct(product: Partial<Product> & { sku: string; t
     }
   }
 
-  const db = await ensureRuntimeDb();
+  const db = await loadRuntimeDb();
   const index = db.products.findIndex((item) => item.id === payload.id || item.sku === payload.sku);
   if (index >= 0) db.products[index] = payload;
   else db.products.unshift(payload);
@@ -489,7 +454,7 @@ export async function deleteProduct(id: string) {
     }
   }
 
-  const db = await ensureRuntimeDb();
+  const db = await loadRuntimeDb();
   db.products = db.products.filter((product) => product.id !== id);
   await saveRuntimeDb(db);
   return true;
@@ -504,7 +469,7 @@ export async function deleteCategory(id: string) {
     }
   }
 
-  const db = await ensureRuntimeDb();
+  const db = await loadRuntimeDb();
   db.categories = db.categories.filter((category) => category.id !== id);
   await saveRuntimeDb(db);
   return true;

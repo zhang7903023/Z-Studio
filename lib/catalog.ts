@@ -2,51 +2,12 @@ import catalogBundle from "@/data/catalog.generated.json";
 import type { CatalogBundle, Category, Product } from "@/lib/types";
 import { hasSupabaseConfig, getSupabaseAdmin } from "@/lib/supabase";
 import { slugify } from "@/lib/slug";
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import { loadRuntimeDb } from "@/lib/runtime-db";
 
 const generated = catalogBundle as CatalogBundle;
-const dataDir = path.join(process.cwd(), "data");
-const runtimeDbPath = path.join(dataDir, "runtime-db.json");
 
 export function getGeneratedCatalog() {
   return generated;
-}
-
-type RuntimeCatalogBundle = CatalogBundle & {
-  customers: unknown[];
-  orders: unknown[];
-  payments: unknown[];
-};
-
-async function loadRuntimeDb(): Promise<RuntimeCatalogBundle> {
-  try {
-    const raw = await fs.readFile(runtimeDbPath, "utf8");
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed.categories) && Array.isArray(parsed.products)) {
-      return parsed as RuntimeCatalogBundle;
-    }
-  } catch {
-    // fall through to generated bundle
-  }
-
-  return {
-    categories: generated.categories,
-    products: generated.products,
-    customers: [],
-    orders: [],
-    payments: []
-  } satisfies RuntimeCatalogBundle;
-}
-
-async function saveRuntimeDb(payload: {
-  categories: Category[];
-  products: Product[];
-  customers: unknown[];
-  orders: unknown[];
-  payments: unknown[];
-}) {
-  await fs.writeFile(runtimeDbPath, JSON.stringify(payload, null, 2), "utf8");
 }
 
 export async function getCatalogBundle() {
@@ -188,9 +149,6 @@ export function filterProducts(
 
 export async function persistCatalogBundle(bundle: CatalogBundle) {
   const runtime = await loadRuntimeDb();
-  await saveRuntimeDb({
-    ...runtime,
-    categories: bundle.categories,
-    products: bundle.products
-  });
+  runtime.categories = bundle.categories;
+  runtime.products = bundle.products;
 }
