@@ -80,11 +80,15 @@ export function OrderForm({ products, initialProductId }: { products: Product[];
       <div className="grid gap-2 md:grid-cols-2">
         <label className="grid gap-2">
           <span className="text-sm text-slate-300">支付方式</span>
-          <select name="paymentMethod" className="rounded-2xl border border-white/10 bg-[#09101d] px-4 py-3 outline-none transition focus:border-accent">
-            <option>USDT</option>
-            <option>支付宝</option>
-            <option>微信</option>
-            <option>银行卡</option>
+          <select
+            name="paymentMethod"
+            defaultValue="微信"
+            className="rounded-2xl border border-white/10 bg-[#09101d] px-4 py-3 outline-none transition focus:border-accent"
+          >
+            <option value="微信">微信</option>
+            <option value="支付宝">支付宝</option>
+            <option value="USDT">USDT</option>
+            <option value="银行卡">银行卡</option>
           </select>
         </label>
         <label className="grid gap-2">

@@ -29,6 +29,23 @@ export default async function OrderPage({
           <OrderForm products={selectableProducts} initialProductId={initialProduct} />
         </section>
         <aside className="space-y-4">
+          <div className="rounded-[2rem] border border-emerald-400/20 bg-emerald-500/10 p-6">
+            <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">微信收款</p>
+            <h2 className="mt-2 text-xl font-semibold text-white">推荐使用微信支付</h2>
+            <p className="mt-3 text-sm leading-7 text-emerald-50/90">
+              扫码后完成付款，再回到页面上传付款截图。系统会把订单先标记为待审核，方便你和后台核对。
+            </p>
+            <div className="mt-5 overflow-hidden rounded-3xl border border-white/10 bg-white p-4">
+              <img
+                src="/payments/wechat-qr.jpg"
+                alt="微信收款码"
+                className="h-auto w-full rounded-2xl object-cover"
+              />
+            </div>
+            <p className="mt-4 text-xs leading-6 text-emerald-100/80">
+              如果你想换二维码，直接替换 `public/payments/wechat-qr.jpg` 即可。
+            </p>
+          </div>
           <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6">
             <h2 className="text-xl font-semibold text-white">下单流程</h2>
             <ol className="mt-4 space-y-3 text-sm leading-7 text-slate-300">
