@@ -42,6 +42,14 @@ export default async function TrackPage({
                   <span>{currentOrder.productTitle}</span>
                 </div>
                 <div className="flex justify-between gap-3 border-b border-white/10 pb-3">
+                  <span>支付方式</span>
+                  <span>{currentOrder.paymentMethod}</span>
+                </div>
+                <div className="flex justify-between gap-3 border-b border-white/10 pb-3">
+                  <span>订单金额</span>
+                  <span>{typeof currentOrder.totalPriceCny === "number" ? `¥${currentOrder.totalPriceCny.toFixed(2)}` : "待确认"}</span>
+                </div>
+                <div className="flex justify-between gap-3 border-b border-white/10 pb-3">
                   <span>联系方式</span>
                   <span>{currentOrder.contactMethod} · {currentOrder.contactValue}</span>
                 </div>

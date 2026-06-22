@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getOrderByOrderNo } from "@/lib/store";
+import { getOrderByOrderNo, updateOrderStatus } from "@/lib/store";
 import { hasStripeConfig, retrieveStripeCheckoutSession } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +20,12 @@ export default async function PaySuccessPage({
     }
   }
   const isPaid = session?.payment_status === "paid" || session?.status === "complete";
+  const orderNo = order?.orderNo || session?.metadata?.orderNo || params.orderNo || "";
+  const shouldPromoteOrder = Boolean(orderNo && isPaid);
+
+  if (shouldPromoteOrder) {
+    await updateOrderStatus(orderNo, "pending_review", "Stripe 已付款，等待人工审核", "");
+  }
 
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-4xl items-center px-4 py-14 sm:px-6 lg:px-8">
@@ -28,12 +34,12 @@ export default async function PaySuccessPage({
         <h1 className="mt-3 font-display text-4xl font-semibold text-white">{isPaid ? "已完成 Stripe 支付" : "已收到支付返回"}</h1>
         <p className="mx-auto mt-4 max-w-2xl leading-8 text-slate-300">
           {order
-            ? `订单 ${order.orderNo} 已创建。${isPaid ? "我们已确认支付状态。" : "如果 Stripe 还在处理，稍后刷新即可。"}`
+            ? `订单 ${order.orderNo} 已创建。${isPaid ? "我们已确认支付状态，并已进入待审核。" : "如果 Stripe 还在处理，稍后刷新即可。"}`
             : "你的支付会话已返回本站，可以继续查看订单状态。"}
         </p>
 
         <div className="mt-8 grid gap-4 rounded-3xl border border-white/10 bg-[#09101d] p-6 text-left sm:grid-cols-2">
-          <Info label="订单号" value={order?.orderNo || params.orderNo || "—"} />
+          <Info label="订单号" value={order?.orderNo || params.orderNo || orderNo || "—"} />
           <Info label="支付状态" value={isPaid ? "已支付" : session?.payment_status || "待确认"} />
           <Info label="商品" value={order?.productTitle || "—"} />
           <Info label="支付金额" value={typeof session?.amount_total === "number" ? `¥${(session.amount_total / 100).toFixed(2)}` : "—"} />
