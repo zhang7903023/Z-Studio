@@ -23,6 +23,10 @@ export async function savePaymentScreenshot(file: File, orderNo: string) {
     }
   }
 
+  if (process.env.VERCEL || process.env.NODE_ENV === "production") {
+    return "";
+  }
+
   const uploadDir = path.join(process.cwd(), "public", "uploads");
   await fs.mkdir(uploadDir, { recursive: true });
   const extension = file.name.split(".").pop() || "png";
