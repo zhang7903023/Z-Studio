@@ -19,8 +19,18 @@ const categoriesBySlug = new Map();
 const topLevel = catalog.categories.filter((category) => !category.parentSlug);
 const children = catalog.categories.filter((category) => category.parentSlug);
 
+const existingCategoriesResult = await supabase.from("categories").select("id,slug");
+if (existingCategoriesResult.error) throw existingCategoriesResult.error;
+for (const row of existingCategoriesResult.data ?? []) {
+  if (row?.slug && row?.id) categoriesBySlug.set(String(row.slug), String(row.id));
+}
+
+const existingProductsResult = await supabase.from("products").select("id,sku");
+if (existingProductsResult.error) throw existingProductsResult.error;
+const existingProductsBySku = new Map((existingProductsResult.data ?? []).map((row) => [String(row.sku), String(row.id)]));
+
 const parentRows = topLevel.map((category) => ({
-  id: randomUUID(),
+  id: categoriesBySlug.get(category.slug) ?? randomUUID(),
   name: category.name,
   slug: category.slug,
   parent_id: null,
@@ -34,7 +44,7 @@ if (result.error) throw result.error;
 for (const row of parentRows) categoriesBySlug.set(row.slug, row.id);
 
 const childRows = children.map((category) => ({
-  id: randomUUID(),
+  id: categoriesBySlug.get(category.slug) ?? randomUUID(),
   name: category.name,
   slug: category.slug,
   parent_id: categoriesBySlug.get(category.parentSlug) ?? null,
@@ -48,7 +58,7 @@ if (result.error) throw result.error;
 for (const row of childRows) categoriesBySlug.set(row.slug, row.id);
 
 const productRows = catalog.products.map((product) => ({
-  id: randomUUID(),
+  id: existingProductsBySku.get(product.sku) ?? randomUUID(),
   sku: product.sku,
   title: product.title,
   slug: product.slug,
