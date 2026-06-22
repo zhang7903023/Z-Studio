@@ -42,6 +42,9 @@ export function AdminConsole({ requiresAccessKey }: { requiresAccessKey: boolean
   const [unlockValue, setUnlockValue] = useState("");
   const [ready, setReady] = useState(!requiresAccessKey);
   const [loading, setLoading] = useState(!requiresAccessKey);
+  const [orderQuery, setOrderQuery] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState<"all" | OrderStatus>("all");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -85,6 +88,35 @@ export function AdminConsole({ requiresAccessKey }: { requiresAccessKey: boolean
 
   const canUseAdmin = useMemo(() => ready && (!requiresAccessKey || Boolean(accessKey)), [accessKey, ready, requiresAccessKey]);
 
+  const filteredOrders = useMemo(() => {
+    const keyword = orderQuery.trim().toLowerCase();
+    return data.orders.filter((order) => {
+      const statusMatch = orderStatusFilter === "all" ? true : order.status === orderStatusFilter;
+      const keywordMatch = !keyword
+        ? true
+        : [
+            order.orderNo,
+            order.customerName,
+            order.productTitle,
+            order.contactValue,
+            order.adminNote,
+            order.deliveryContent,
+            order.requirements
+          ]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(keyword));
+      return statusMatch && keywordMatch;
+    });
+  }, [data.orders, orderQuery, orderStatusFilter]);
+
+  const orderStats = useMemo(() => {
+    const total = data.orders.length;
+    const pendingReview = data.orders.filter((order) => order.status === "pending_review").length;
+    const pendingPayment = data.orders.filter((order) => order.status === "pending_payment").length;
+    const completed = data.orders.filter((order) => order.status === "delivered").length;
+    return { total, pendingReview, pendingPayment, completed };
+  }, [data.orders]);
+
   async function unlock() {
     const nextAccessKey = unlockValue.trim();
     if (!nextAccessKey) return;
@@ -107,6 +139,9 @@ export function AdminConsole({ requiresAccessKey }: { requiresAccessKey: boolean
     setUnlockValue("");
     setReady(false);
     setData({ categories: [], products: [], orders: [] });
+    setOrderQuery("");
+    setOrderStatusFilter("all");
+    setSelectedOrder(null);
   }
 
   async function handleCreateCategory(formData: FormData) {
@@ -177,6 +212,11 @@ export function AdminConsole({ requiresAccessKey }: { requiresAccessKey: boolean
       )
     );
     setMessage("订单已更新");
+    setSelectedOrder((current) =>
+      current && current.orderNo === orderNo
+        ? { ...current, status, adminNote, deliveryContent, updatedAt: new Date().toISOString() }
+        : current
+    );
     await refresh();
   }
 
@@ -468,10 +508,41 @@ export function AdminConsole({ requiresAccessKey }: { requiresAccessKey: boolean
 
       <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6">
         <h2 className="text-xl font-semibold text-white">订单管理</h2>
+        <p className="mt-2 text-sm text-slate-400">支持搜索、筛选、查看详情和直接修改状态。付款截图也能在详情里查看。</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-4">
+          <StatCard label="订单总数" value={orderStats.total.toString()} />
+          <StatCard label="待付款" value={orderStats.pendingPayment.toString()} />
+          <StatCard label="待审核" value={orderStats.pendingReview.toString()} />
+          <StatCard label="已完成" value={orderStats.completed.toString()} />
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_220px]">
+          <input
+            value={orderQuery}
+            onChange={(event) => setOrderQuery(event.target.value)}
+            placeholder="搜索订单号 / 客户 / 商品 / 联系方式"
+            className="rounded-2xl border border-white/10 bg-[#09101d] px-4 py-3 text-sm"
+          />
+          <select
+            value={orderStatusFilter}
+            onChange={(event) => setOrderStatusFilter(event.target.value as "all" | OrderStatus)}
+            className="rounded-2xl border border-white/10 bg-[#09101d] px-4 py-3 text-sm"
+          >
+            <option value="all">全部状态</option>
+            {orderStatuses.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="mt-4 space-y-4">
-          {data.orders.map((order) => (
-            <OrderEditor key={order.id} order={order} onSave={handleUpdateOrder} />
-          ))}
+          {filteredOrders.length ? (
+            filteredOrders.map((order) => (
+              <OrderEditor key={order.id} order={order} onSave={handleUpdateOrder} onView={() => setSelectedOrder(order)} />
+            ))
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-[#09101d] p-6 text-sm text-slate-400">没有找到符合条件的订单。</div>
+          )}
         </div>
       </section>
 
@@ -501,6 +572,16 @@ export function AdminConsole({ requiresAccessKey }: { requiresAccessKey: boolean
         >
           <EditCategoryFields category={editingCategory} />
         </EditSheet>
+      ) : null}
+
+      {selectedOrder ? (
+        <OrderDetailSheet
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          onSave={async (status, adminNote, deliveryContent) => {
+            await handleUpdateOrder(selectedOrder.orderNo, status, adminNote, deliveryContent);
+          }}
+        />
       ) : null}
     </div>
   );
@@ -628,6 +709,15 @@ function EditCategoryFields({ category }: { category: Category }) {
   );
 }
 
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-[#09101d] p-4">
+      <p className="text-xs uppercase tracking-[0.25em] text-slate-500">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
 function QuickProductInlineEditor({
   product,
   busy,
@@ -712,9 +802,11 @@ function QuickProductInlineEditor({
 
 function OrderEditor({
   order,
+  onView,
   onSave
 }: {
   order: Order;
+  onView: () => void;
   onSave: (orderNo: string, status: OrderStatus, adminNote: string, deliveryContent: string) => Promise<void>;
 }) {
   const [status, setStatus] = useState<OrderStatus>(order.status);
@@ -727,6 +819,9 @@ function OrderEditor({
         <div>
           <p className="text-sm text-slate-400">{order.orderNo}</p>
           <p className="mt-1 text-sm text-white">{order.productTitle}</p>
+          <p className="mt-1 text-xs text-slate-500">
+            {order.customerName} · {order.contactMethod} · {order.contactValue}
+          </p>
         </div>
         <StatusPill status={status} />
       </div>
@@ -761,10 +856,158 @@ function OrderEditor({
         <button onClick={() => onSave(order.orderNo, status, adminNote, deliveryContent)} className="rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-[#050816]">
           保存订单
         </button>
+        <button onClick={onView} className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-slate-300">
+          查看详情
+        </button>
         <p className="text-xs text-slate-500">
           {order.contactMethod} · {order.contactValue}
         </p>
       </div>
+    </div>
+  );
+}
+
+function OrderDetailSheet({
+  order,
+  onClose,
+  onSave
+}: {
+  order: Order;
+  onClose: () => void;
+  onSave: (status: OrderStatus, adminNote: string, deliveryContent: string) => Promise<void>;
+}) {
+  const [status, setStatus] = useState<OrderStatus>(order.status);
+  const [adminNote, setAdminNote] = useState(order.adminNote);
+  const [deliveryContent, setDeliveryContent] = useState(order.deliveryContent);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setStatus(order.status);
+    setAdminNote(order.adminNote);
+    setDeliveryContent(order.deliveryContent);
+  }, [order]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center">
+      <div className="w-full max-w-5xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#060b14] shadow-2xl shadow-black/40">
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+          <div>
+            <h3 className="text-lg font-semibold text-white">订单详情</h3>
+            <p className="mt-1 text-xs text-slate-400">{order.orderNo}</p>
+          </div>
+          <button onClick={onClose} className="rounded-full border border-white/10 px-3 py-1 text-sm text-slate-300">
+            关闭
+          </button>
+        </div>
+
+        <div className="grid gap-6 px-5 py-5 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-white/10 bg-[#09101d] p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm text-slate-400">{order.productTitle}</p>
+                  <p className="mt-1 text-lg font-semibold text-white">{order.customerName}</p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    {order.contactMethod} · {order.contactValue}
+                  </p>
+                </div>
+                <StatusPill status={status} />
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <StatMini label="数量" value={order.quantity.toString()} />
+                <StatMini label="金额" value={formatCurrency(order.totalPriceCny)} />
+                <StatMini label="创建时间" value={new Date(order.createdAt).toLocaleString()} />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-[#09101d] p-4">
+              <p className="text-sm font-medium text-white">付款截图</p>
+              {order.paymentScreenshotUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={order.paymentScreenshotUrl} alt="付款截图" className="mt-3 max-h-96 w-full rounded-2xl object-contain" />
+              ) : (
+                <p className="mt-3 text-sm text-slate-400">暂无付款截图</p>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-[#09101d] p-4">
+              <p className="text-sm font-medium text-white">用户需求</p>
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-300">{order.requirements || "暂无需求说明"}</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-white/10 bg-[#09101d] p-4">
+              <p className="text-sm font-medium text-white">编辑订单</p>
+              <div className="mt-4 grid gap-3">
+                <select
+                  value={status}
+                  onChange={(event) => setStatus(event.target.value as OrderStatus)}
+                  className="rounded-2xl border border-white/10 bg-[#0f1627] px-4 py-3 text-sm"
+                >
+                  {orderStatuses.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+                <textarea
+                  value={adminNote}
+                  onChange={(event) => setAdminNote(event.target.value)}
+                  rows={4}
+                  placeholder="后台备注"
+                  className="rounded-2xl border border-white/10 bg-[#0f1627] px-4 py-3 text-sm"
+                />
+                <textarea
+                  value={deliveryContent}
+                  onChange={(event) => setDeliveryContent(event.target.value)}
+                  rows={5}
+                  placeholder="交付内容"
+                  className="rounded-2xl border border-white/10 bg-[#0f1627] px-4 py-3 text-sm"
+                />
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={async () => {
+                    setSaving(true);
+                    try {
+                      await onSave(status, adminNote, deliveryContent);
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                  disabled={saving}
+                  className="rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-[#050816] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {saving ? "保存中…" : "保存订单"}
+                </button>
+                <button onClick={onClose} className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-slate-300">
+                  关闭
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-[#09101d] p-4 text-sm text-slate-300">
+              <p className="font-medium text-white">订单信息</p>
+              <div className="mt-3 grid gap-2 text-slate-400">
+                <p>订单号：{order.orderNo}</p>
+                <p>支付方式：{order.paymentMethod}</p>
+                <p>更新时间：{new Date(order.updatedAt).toLocaleString()}</p>
+                <p>交付状态：{order.deliveryContent ? "已填写" : "未填写"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatMini({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-[#0f1627] p-3">
+      <p className="text-xs uppercase tracking-[0.25em] text-slate-500">{label}</p>
+      <p className="mt-2 text-sm text-white">{value}</p>
     </div>
   );
 }
