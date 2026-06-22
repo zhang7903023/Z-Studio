@@ -14,6 +14,21 @@ export default async function AdminPage() {
         </p>
       </div>
 
+      <div className="mt-6 grid gap-4 rounded-[2rem] border border-cyan-400/20 bg-cyan-500/10 p-6 text-sm text-cyan-50 md:grid-cols-3">
+        <div>
+          <p className="font-semibold">怎么找“修改”</p>
+          <p className="mt-2 text-cyan-100/90">进商品管理后，看每个商品卡片右上角的青色“修改”。</p>
+        </div>
+        <div>
+          <p className="font-semibold">怎么快速改价</p>
+          <p className="mt-2 text-cyan-100/90">商品卡片下方有“快速改价”区域，直接改价格文本和数值。</p>
+        </div>
+        <div>
+          <p className="font-semibold">如果没看到</p>
+          <p className="mt-2 text-cyan-100/90">通常是 Vercel 还在重新构建，刷新一下最新部署域名即可。</p>
+        </div>
+      </div>
+
       <div className="mt-8">
         <AdminConsole requiresAccessKey={hasAdminAccessKey()} />
       </div>
