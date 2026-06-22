@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createOrder, listOrders } from "@/lib/store";
-import { getCatalogBundle } from "@/lib/catalog";
+import { getCatalogBundle, productDisplayPrice } from "@/lib/catalog";
 import { savePaymentScreenshot } from "@/lib/uploads";
+import { createStripeCheckoutSession, getSiteUrl } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 
@@ -48,6 +49,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "请选择有效商品" }, { status: 400 });
     }
 
+    const unitPriceCny = productDisplayPrice(product);
+    const totalPriceCny =
+      typeof unitPriceCny === "number" ? unitPriceCny * (Number.isFinite(quantity) && quantity > 0 ? quantity : 1) : null;
+
     const paymentScreenshotUrl =
       screenshot instanceof File ? await savePaymentScreenshot(screenshot, product.sku) : "";
 
@@ -61,11 +66,33 @@ export async function POST(request: Request) {
       requirements,
       paymentMethod,
       paymentScreenshotUrl,
-      totalPriceCny:
-        typeof product.priceCny === "number"
-          ? product.priceCny * (Number.isFinite(quantity) && quantity > 0 ? quantity : 1)
-          : null
+      totalPriceCny
     });
+
+    if (paymentMethod.toLowerCase().includes("stripe")) {
+      if (typeof unitPriceCny !== "number") {
+        return NextResponse.json({ error: "该商品暂无可用于 Stripe 的固定价格，请先在后台补充价格。" }, { status: 400 });
+      }
+
+      const siteUrl = getSiteUrl(new URL(request.url).origin);
+      const session = await createStripeCheckoutSession({
+        orderNo: order.orderNo,
+        productTitle: `${product.title} × ${order.quantity}`,
+        quantity: order.quantity,
+        unitAmountCny: unitPriceCny,
+        successUrl: `${siteUrl}/pay/success?orderNo=${encodeURIComponent(order.orderNo)}&session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${siteUrl}/pay/cancel?orderNo=${encodeURIComponent(order.orderNo)}`,
+        customerName: order.customerName,
+        contactValue: order.contactValue
+      });
+
+      return NextResponse.json({
+        ok: true,
+        orderNo: order.orderNo,
+        order,
+        redirectUrl: session.url
+      });
+    }
 
     return NextResponse.json({ ok: true, orderNo: order.orderNo, order });
   } catch (error) {

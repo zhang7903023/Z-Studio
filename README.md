@@ -6,6 +6,7 @@
 - TailwindCSS
 - Supabase
 - Vercel
+- Stripe 跳转支付
 
 ## 已实现内容
 - 首页科技极简深色风格
@@ -40,6 +41,8 @@
    - `SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `SUPABASE_STORAGE_BUCKET`
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_WEBHOOK_SECRET`
 4. 访问 `POST /api/seed` 同步初始商品与分类，或直接运行本地 seed：
    ```bash
    npm run seed:local
@@ -50,6 +53,8 @@
 - `SUPABASE_ANON_KEY`：项目设置里的 `API` 页面中的 `anon public`
 - `SUPABASE_SERVICE_ROLE_KEY`：同一个 `API` 页面中的 `service_role`
 - 找到后直接复制到 `.env.local`
+- `STRIPE_SECRET_KEY`：Stripe 后台 `Developers / API keys` 里的 Secret key
+- `STRIPE_WEBHOOK_SECRET`：Stripe 后台创建 webhook endpoint 后给你的签名密钥
 
 ## Vercel 部署
 1. 将这个 GitHub 仓库直接导入 Vercel。
@@ -59,9 +64,12 @@
    - `SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `SUPABASE_STORAGE_BUCKET`
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_WEBHOOK_SECRET`
    - `ADMIN_ACCESS_KEY`
 3. Build Command 保持默认：`npm run build`
 4. 部署完成后，直接使用 Vercel 给你的正式链接或 Preview 链接分享给别人。
+5. Stripe 如果要自动更新订单状态，再到 Stripe 后台添加 webhook，地址填：`https://你的域名/api/webhooks/stripe`
 
 ## 分享给别人看
 - 最稳妥的方式：部署到 Vercel 后，把生成的 `https://xxx.vercel.app` 链接直接发给对方。
