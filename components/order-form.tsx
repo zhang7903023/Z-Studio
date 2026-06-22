@@ -3,10 +3,18 @@
 import { useMemo, useState, type FormEvent } from "react";
 import type { Product } from "@/lib/types";
 
-export function OrderForm({ products, initialProductId }: { products: Product[]; initialProductId?: string }) {
+export function OrderForm({
+  products,
+  initialProductId,
+  stripeEnabled
+}: {
+  products: Product[];
+  initialProductId?: string;
+  stripeEnabled: boolean;
+}) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ orderNo?: string; error?: string } | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState("Stripe跳转支付");
+  const [paymentMethod, setPaymentMethod] = useState(stripeEnabled ? "Stripe跳转支付" : "微信");
   const usesStripeRedirect = useMemo(() => paymentMethod.toLowerCase().includes("stripe"), [paymentMethod]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -35,7 +43,7 @@ export function OrderForm({ products, initialProductId }: { products: Product[];
       }
       setResult({ orderNo: payload.orderNo });
       event.currentTarget.reset();
-      setPaymentMethod("Stripe跳转支付");
+      setPaymentMethod(stripeEnabled ? "Stripe跳转支付" : "微信");
     } catch (error) {
       setResult({ error: error instanceof Error ? error.message : "提交失败" });
     } finally {
@@ -93,7 +101,7 @@ export function OrderForm({ products, initialProductId }: { products: Product[];
             onChange={(event) => setPaymentMethod(event.target.value)}
             className="rounded-2xl border border-white/10 bg-[#09101d] px-4 py-3 outline-none transition focus:border-accent"
           >
-            <option value="Stripe跳转支付">Stripe 跳转支付</option>
+            {stripeEnabled ? <option value="Stripe跳转支付">Stripe 跳转支付</option> : null}
             <option value="微信">微信</option>
             <option value="支付宝">支付宝</option>
             <option value="USDT">USDT</option>
@@ -120,6 +128,11 @@ export function OrderForm({ products, initialProductId }: { products: Product[];
       </button>
       {result?.orderNo ? <p className="text-sm text-emerald-300">订单已创建，订单号：{result.orderNo}</p> : null}
       {result?.error ? <p className="text-sm text-rose-300">{result.error}</p> : null}
+      {!stripeEnabled ? (
+        <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-100">
+          当前环境还没配好 Stripe 跳转支付，所以先显示人工收款方式。把 `STRIPE_SECRET_KEY` 和 `STRIPE_WEBHOOK_SECRET` 配好后，这里会自动恢复跳转支付。
+        </div>
+      ) : null}
       <p className="text-xs leading-6 text-slate-500">
         {usesStripeRedirect
           ? "会先创建订单，再跳转到 Stripe 托管支付页。支付完成后会回到本站成功页。"

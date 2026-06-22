@@ -1,5 +1,6 @@
 import { OrderForm } from "@/components/order-form";
 import { filterProducts, getCatalogBundle } from "@/lib/catalog";
+import { hasStripeConfig } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export default async function OrderPage({
 }) {
   const params = (await searchParams) ?? {};
   const { products } = await getCatalogBundle();
+  const stripeEnabled = hasStripeConfig();
   const selectableProducts = filterProducts(products, { activeOnly: true }).slice(0, 120);
   const initialProduct = params.product
     ? selectableProducts.find((product) => product.slug === params.product)?.id
@@ -26,9 +28,18 @@ export default async function OrderPage({
               完整记录商品、联系方式、备注和支付信息，适合人工审核收款与后续交付。
             </p>
           </div>
-          <OrderForm products={selectableProducts} initialProductId={initialProduct} />
+          <OrderForm products={selectableProducts} initialProductId={initialProduct} stripeEnabled={stripeEnabled} />
         </section>
         <aside className="space-y-4">
+          {!stripeEnabled ? (
+            <div className="rounded-[2rem] border border-amber-400/20 bg-amber-500/10 p-6">
+              <p className="text-sm uppercase tracking-[0.3em] text-amber-200">Stripe 未启用</p>
+              <h2 className="mt-2 text-xl font-semibold text-white">当前先用微信人工收款</h2>
+              <p className="mt-3 text-sm leading-7 text-amber-50/90">
+                如果要真正跳转收款，需要在 Vercel 环境变量里补上 `STRIPE_SECRET_KEY` 和 `STRIPE_WEBHOOK_SECRET`。没配置前，这里会自动切回人工收款，不影响下单。
+              </p>
+            </div>
+          ) : null}
           <div className="rounded-[2rem] border border-emerald-400/20 bg-emerald-500/10 p-6">
             <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">微信收款</p>
             <h2 className="mt-2 text-xl font-semibold text-white">推荐使用微信支付</h2>
