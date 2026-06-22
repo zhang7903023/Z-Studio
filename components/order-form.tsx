@@ -17,8 +17,16 @@ export function OrderForm({ products, initialProductId }: { products: Product[];
         method: "POST",
         body: formData
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error || "提交失败");
+      const raw = await response.text();
+      let payload: { orderNo?: string; error?: string; [key: string]: unknown } = {};
+      if (raw) {
+        try {
+          payload = JSON.parse(raw) as typeof payload;
+        } catch {
+          payload = { error: raw };
+        }
+      }
+      if (!response.ok) throw new Error(payload?.error || raw || "提交失败");
       setResult({ orderNo: payload.orderNo });
       event.currentTarget.reset();
     } catch (error) {
